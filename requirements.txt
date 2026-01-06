@@ -1,0 +1,4 @@
+streamlit==1.52.2
+openai==2.14.0
+st-chat-message==0.3.8
+dotenv==0.9.9

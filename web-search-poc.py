@@ -1,9 +1,16 @@
 import streamlit as st
 from st_chat_message import message
 from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+
+OPENAI_KEY = os.getenv("OPENAI_KEY")
 
 # Initialize OpenAI client
-client = OpenAI()
+client = OpenAI(api_key=OPENAI_KEY)
 
 st.set_page_config(page_title="AI Search Assistant")
 
