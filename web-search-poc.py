@@ -5,102 +5,217 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-
 client = OpenAI(api_key=os.getenv("OPENAI_KEY"))
 
-st.set_page_config(page_title="AI Search Assistant")
+
+st.markdown("""
+<style>
+/* Align selectbox and buttons */
+div[data-testid="column"] {
+    display: flex;
+    align-items: center;
+}
+
+/* Make buttons same height as selectbox */
+.stButton > button {
+    height: 40px;
+    margin-top: 28px;
+}
+
+/* Selectbox height tweak */
+div[data-baseweb="select"] {
+    min-height: 48px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+st.set_page_config(
+    page_title="AI Search Assistant",
+    page_icon="🔍",
+    layout="centered"
+)
+
 st.title("🔍 AI Search Assistant")
+
+DEFAULT_WEB_SEARCH_SETTINGS = {
+    "reference_urls": [],
+    "location": {
+        "country": "India",
+        "region": "",
+        "city": "",
+        "timezone": "Asia/Kolkata",
+    },
+    "context_size": 5,
+}
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
 if "loading" not in st.session_state:
     st.session_state.loading = False
 
-WEB_SEARCH_MODELS = ["gpt-5", "gpt-4.1"]
-ALL_MODELS = ["gpt-5", "gpt-4.1", "gpt-4.1-mini"]
-WEB_SEARCH_MODES = ["Auto", "Manual", "Always"]
+if "web_search_enabled" not in st.session_state:
+    st.session_state.web_search_enabled = False
 
-selected_model = st.selectbox("Select model", ALL_MODELS, index=ALL_MODELS.index("gpt-4.1"))
-selected_mode = st.selectbox("Select web search mode", WEB_SEARCH_MODES, index=WEB_SEARCH_MODES.index("Auto"))
+if "web_search_settings" not in st.session_state:
+    st.session_state.web_search_settings = DEFAULT_WEB_SEARCH_SETTINGS.copy()
 
-manual_toggle = st.toggle("Enable Web Search", value=False) if selected_mode == "Manual" else False
+@st.dialog("⚙️ Web Search Configuration")
+def web_search_modal():
+    settings = st.session_state.web_search_settings
 
-if selected_model not in WEB_SEARCH_MODELS and (selected_mode == "Always" or (selected_mode == "Manual" and manual_toggle)):
-    st.warning("⚠️ This model does not support web search.\n\nPlease switch to **gpt-5** or **gpt-4.1**.")
+    st.markdown("### 🌐 Reference URLs (optional)")
+    reference_urls = st.text_area(
+        "One URL per line",
+        value="\n".join(settings["reference_urls"]),
+        placeholder="https://openai.com/research"
+    )
 
-for idx, chat in enumerate(st.session_state.chat_history):
-    message(chat["text"], is_user=chat["is_user"], key=f"chat_{idx}")
+    st.markdown("### 📍 User Location")
+    col1, col2 = st.columns(2)
+    country = col1.text_input("Country", value=settings["location"]["country"])
+    region = col2.text_input("Region / State", value=settings["location"]["region"])
 
-def should_search(query: str) -> bool:
-    return any(k in query.lower() for k in [ "latest", "today", "current", "news", "price", "update", "breaking", "trend", "announcement", "weather", "stocks", "score"])
+    city = st.text_input("City", value=settings["location"]["city"])
+    timezone = st.text_input(
+        "Timezone",
+        value=settings["location"]["timezone"]
+    )
 
-def get_web_search_enabled(query: str) -> bool:
-    if selected_mode == "Always":
-        return True
-    if selected_mode == "Manual":
-        return manual_toggle
-    # Auto mode
-    return should_search(query)
+    context_size = st.slider(
+        "Search Context Size",
+        1, 10,
+        value=settings["context_size"]
+    )
+
+    st.divider()
+
+    if st.button("💾 Save Configuration", use_container_width=True):
+        st.session_state.web_search_settings = {
+            "reference_urls": [
+                u.strip() for u in reference_urls.splitlines() if u.strip()
+            ],
+            "location": {
+                "country": country,
+                "region": region,
+                "city": city,
+                "timezone": timezone,
+            },
+            "context_size": context_size,
+        }
+        st.rerun()
+
+col1, col2, col3 = st.columns([3, 1, 1])
+
+with col1:
+    model = st.selectbox(
+        "",
+        ["gpt-5", "gpt-4.1"],
+        index=0
+    )
+
+with col2:
+    if st.button("⚙️ Configure"):
+        web_search_modal()
+
+with col3:
+    if st.button(
+        "🛑 Search ON" if st.session_state.web_search_enabled else "▶️ Search OFF"
+    ):
+        st.session_state.web_search_enabled = not st.session_state.web_search_enabled
+        st.rerun()
+
+for i, chat in enumerate(st.session_state.chat_history):
+    message(chat["text"], is_user=chat["is_user"], key=f"chat_{i}")
 
 def handle_submit():
     query = st.session_state.user_input.strip()
     if not query:
         return
 
-    web_search = get_web_search_enabled(query)
-    st.session_state._current_web_search = web_search
+    st.session_state.chat_history.append(
+        {"text": query, "is_user": True}
+    )
 
-    st.session_state.chat_history.append({"text": query, "is_user": True})
-
-    loading_text = "🔎 Searching the web..." if web_search and selected_mode != "Auto" else "Thinking..."
-    st.session_state.chat_history.append({"text": loading_text, "is_user": False})
+    st.session_state.chat_history.append(
+        {
+            "text": "🔎 Searching the web..."
+            if st.session_state.web_search_enabled
+            else "Thinking...",
+            "is_user": False
+        }
+    )
 
     st.session_state.loading = True
     st.session_state.user_input = ""
 
-
-st.text_input("Type your message and press Enter", key="user_input", on_change=handle_submit)
+st.text_input(
+    "Type your message and press Enter",
+    key="user_input",
+    on_change=handle_submit
+)
 
 if st.session_state.loading:
     try:
-        last_user_message = next(m["text"] for m in reversed(st.session_state.chat_history) if m["is_user"])
-        web_search_enabled = getattr(st.session_state, "_current_web_search", False)
-
-        query_for_model = last_user_message
-        if web_search_enabled:
-            query_for_model = f"You may search the web to find the following information if required:\n\n{last_user_message}"
-
-        response = client.responses.create(
-            model=selected_model,
-            tools=[{"type": "web_search"}] if web_search_enabled else None,
-            input=query_for_model
+        user_query = next(
+            m["text"]
+            for m in reversed(st.session_state.chat_history)
+            if m["is_user"]
         )
 
+        tools = None
+        prompt = user_query
+
+        settings = st.session_state.web_search_settings
+
+        ref_text = ""
+        if settings["reference_urls"]:
+            ref_text = (
+                "Prioritize these sources if relevant:\n"
+                + "\n".join(settings["reference_urls"])
+                + "\n\n"
+            )
+
+        prompt = (
+            "You may search the web to find the following information if required:\n"
+            f"User location:\n{settings['location']}\n\n"
+            f"{ref_text}"
+            f"Query:\n{user_query}"
+        )
+
+        tools = [{"type": "web_search"}]
+
+        response = client.responses.create(
+            model=model,
+            tools=tools if st.session_state.web_search_enabled else None,
+            input=prompt,
+        )
+
+        answer = response.output_text
         citations = {}
 
         for out in response.output:
-            print(out)
             if out.type == "message":
                 for item in out.content:
-                    for annotation in item.annotations:
-                        citations[annotation.title] = annotation.url
-
-
-        answer = response.output_text
-        if any(msg.type == "web_search_call" for msg in response.output):
-            answer = f"\n\n🔎 Web Search Results:\n\n{answer}"
-
+                    for ann in item.annotations:
+                        citations[ann.title] = ann.url
 
         if citations:
-            answer += "\n\n📚 Citations:\n"
+            answer += "\n\n📚 **Citations**\n"
             for title, url in citations.items():
                 answer += f"- [{title}]({url})\n"
 
-        st.session_state.chat_history[-1] = {"text": answer, "is_user": False}
+        st.session_state.chat_history[-1] = {
+            "text": answer,
+            "is_user": False
+        }
 
     except Exception as e:
-        st.session_state.chat_history[-1] = {"text": f"❌ API error: {e}", "is_user": False}
-
+        st.session_state.chat_history[-1] = {
+            "text": f"❌ API error: {e}",
+            "is_user": False
+        }
     finally:
         st.session_state.loading = False
         st.rerun()
