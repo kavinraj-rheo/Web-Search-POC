@@ -83,12 +83,6 @@ def web_search_modal():
         value=settings["location"]["timezone"]
     )
 
-    context_size = st.slider(
-        "Search Context Size",
-        1, 10,
-        value=settings["context_size"]
-    )
-
     st.divider()
 
     if st.button("💾 Save Configuration", use_container_width=True):
@@ -101,8 +95,7 @@ def web_search_modal():
                 "region": region,
                 "city": city,
                 "timezone": timezone,
-            },
-            "context_size": context_size,
+            }
         }
         st.rerun()
 
