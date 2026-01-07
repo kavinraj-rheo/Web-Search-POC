@@ -67,7 +67,7 @@ def web_search_modal():
 
     st.markdown("### 🌐 Reference URLs (optional)")
     reference_urls = st.text_area(
-        "One URL per line",
+        label="Reference URLs",
         value="\n".join(settings["reference_urls"]),
         placeholder="https://openai.com/research"
     )
@@ -110,9 +110,9 @@ col1, col2, col3 = st.columns([3, 1, 1])
 
 with col1:
     model = st.selectbox(
-        "",
-        ["gpt-5", "gpt-4.1"],
-        index=0
+        label="Select Model",
+        options=["gpt-5", "gpt-4.1"],
+        index=0,
     )
 
 with col2:
