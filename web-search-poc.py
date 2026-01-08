@@ -44,11 +44,11 @@ div[data-baseweb="select"] {
 """, unsafe_allow_html=True)
 
 st.set_page_config(
-    page_title="AI Search Assistant",
+    page_title="O-Rheo Search Assistant",
     page_icon="🔍",
     layout="centered"
 )
-st.title("🔍 AI Search Assistant")
+st.title("🔍 O-Rheo Search Assistant")
 
 # -------------------- DEFAULT SETTINGS --------------------
 DEFAULT_WEB_SEARCH_SETTINGS = {
