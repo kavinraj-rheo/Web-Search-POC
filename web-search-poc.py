@@ -22,26 +22,47 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_KEY"))
 
 # -------------------- STREAMLIT STYLING --------------------
-st.markdown("""
+MANUAL_CSS = """
 <style>
-/* Align selectbox and buttons */
 div[data-testid="column"] {
     display: flex;
     align-items: center;
 }
 
-/* Make buttons same height as selectbox */
 .stButton > button {
     height: 40px;
     margin-top: 28px;
 }
 
-/* Selectbox height tweak */
 div[data-baseweb="select"] {
     min-height: 48px;
 }
 </style>
-""", unsafe_allow_html=True)
+"""
+ENABLED_SEARCH_CSS = """
+<style>
+div[data-testid="column"] {
+    display: flex;
+    align-items: center;
+}
+
+.stButton > button {
+    height: 40px;
+    margin-top: 28px;
+    min-width: 274px;   /* 👈 increased size */
+}
+
+div[data-baseweb="select"] {
+    min-height: 48px;
+}
+</style>
+"""
+
+if SEARCH_MODE == "manual":
+    st.markdown(MANUAL_CSS, unsafe_allow_html=True)
+else:
+    st.markdown(ENABLED_SEARCH_CSS, unsafe_allow_html=True)
+
 
 st.set_page_config(
     page_title="O-Rheo Search Assistant",
@@ -77,7 +98,7 @@ if "web_search_settings" not in st.session_state:
     st.session_state.web_search_settings = DEFAULT_WEB_SEARCH_SETTINGS.copy()
 
 # -------------------- CONFIG MODAL --------------------
-@st.dialog("⚙️ Web Search Configuration")
+@st.dialog("⚙️ Configure Web Search Tool")
 def web_search_modal():
     settings = st.session_state.web_search_settings
 
@@ -134,7 +155,7 @@ with col1:
     )
 
 with col2:
-    if st.button("⚙️ Configure"):
+    if st.button("⚙️ Configure Web Search"):
         web_search_modal()
 
 with col3:
