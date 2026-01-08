@@ -1,11 +1,11 @@
 import os
-import yaml
-import pycountry
-import pytz
-import streamlit as st
-from st_chat_message import message
-from openai import OpenAI
-from dotenv import load_dotenv
+import yaml # type: ignore
+import pycountry # type: ignore
+import pytz # type: ignore
+import streamlit as st # type: ignore
+from st_chat_message import message # type: ignore
+from openai import OpenAI # type: ignore
+from dotenv import load_dotenv # type: ignore
 from urllib.parse import urlparse
 
 # -------------------- LOAD CONFIG --------------------
