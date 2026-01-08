@@ -155,7 +155,7 @@ with col1:
     )
 
 with col2:
-    if st.button("⚙️ Configure Web Search"):
+    if st.button("⚙️  Configure"):
         web_search_modal()
 
 with col3:
