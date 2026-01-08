@@ -153,11 +153,15 @@ def handle_submit():
     if not query:
         return
 
-    st.session_state.chat_history.append({"text": query, "is_user": True})
-    st.session_state.chat_history.append({
-        "text": "🔎 Searching the web..." if is_web_search_enabled() else "Thinking...",
-        "is_user": False
-    })
+    st.session_state.chat_history.append(
+        {"text": query, "is_user": True}
+    )
+
+    # ✅ ALWAYS show Thinking...
+    st.session_state.chat_history.append(
+        {"text": "Thinking...", "is_user": False}
+    )
+
     st.session_state.loading = True
     st.session_state.user_input = ""
 
@@ -197,9 +201,9 @@ if st.session_state.loading:
                 f"{ref_text}"
                 f"Query:\n{user_query}"
             )
-        elif SEARCH_MODE == "auto" and is_web_search_enabled():
+        elif SEARCH_MODE == "auto":
             prompt = (
-                "Decide if web search is required and answer accordingly:\n"
+                "You may search the web if required:\n"
                 f"User location:\n{settings['location']}\n\n"
                 f"{ref_text}"
                 f"Query:\n{user_query}"
@@ -220,11 +224,21 @@ if st.session_state.loading:
         # -------------------- OPENAI RESPONSE --------------------
         response = client.responses.create(
             model=model,
-            tools=tools if is_web_search_enabled() else None,
             input=prompt,
+            tools=tools if is_web_search_enabled() else None,
+        )
+
+        # -------------------- WEB USAGE DETECTION --------------------
+        web_used = any(
+            out.type == "web_search_call" 
+            for out in response.output
         )
 
         answer = response.output_text
+
+        if web_used:
+            answer = "🔎 _Searched the web for results._ \n\n" + answer
+
         citations = {}
         for out in response.output:
             if out.type == "message":
@@ -234,7 +248,7 @@ if st.session_state.loading:
         if citations:
             answer += "\n\n📚 **Citations**\n"
             for title, url in citations.items():
-                answer += f"- [{title}]({url})\n"
+                answer += f'- <a href="{url}" target="_blank" rel="noopener noreferrer">{title}</a>\n'
 
         st.session_state.chat_history[-1] = {"text": answer, "is_user": False}
 
