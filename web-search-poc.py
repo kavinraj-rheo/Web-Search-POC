@@ -96,6 +96,12 @@ if "web_search_enabled" not in st.session_state:
 
 if "web_search_settings" not in st.session_state:
     st.session_state.web_search_settings = DEFAULT_WEB_SEARCH_SETTINGS.copy()
+    
+def country_to_alpha2(name: str) -> str | None:
+    try:
+        return pycountry.countries.lookup(name).alpha_2
+    except LookupError:
+        return None
 
 # -------------------- CONFIG MODAL --------------------
 @st.dialog("⚙️ Configure Web Search Tool")
@@ -218,14 +224,14 @@ if st.session_state.loading:
         if SEARCH_MODE == "always" or (SEARCH_MODE == "manual" and st.session_state.web_search_enabled):
             prompt = (
                 "Please check the internet to answer the following query:\n"
-                f"User location:\n{settings['location']}\n\n"
+                f"User timezone:\n{settings['location']['timezone']}\n\n"
                 f"{ref_text}"
                 f"Query:\n{user_query}"
             )
         elif SEARCH_MODE == "auto":
             prompt = (
                 "You may search the web if required:\n"
-                f"User location:\n{settings['location']}\n\n"
+                f"User timezone:\n{settings['location']['timezone']}\n\n"
                 f"{ref_text}"
                 f"Query:\n{user_query}"
             )
@@ -241,7 +247,17 @@ if st.session_state.loading:
                 if parsed.netloc:
                     domains.append(parsed.netloc)
             tools = [{"type": "web_search", "filters": {"allowed_domains": list(set(domains))}}] if domains else [{"type": "web_search"}]
+            if settings['location']:
+                user_location_details = {
+                    k: v for k, v in settings["location"].items()
+                    if k != "timezone"
+                }
 
+                user_location_details['country'] = country_to_alpha2(user_location_details['country'])
+                tools[0]['user_location'] = user_location_details
+                tools[0]['user_location']['type'] = "approximate"
+                
+            
         # -------------------- OPENAI RESPONSE --------------------
         response = client.responses.create(
             model=model,
